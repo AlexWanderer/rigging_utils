@@ -29,6 +29,19 @@
 #  Blender: Nathan Vegdahl (who taught us everything we know about blender py-rigging) 
 #          
 
+
+""" TODO:
+1. UI:
+   checkbox   layer name    theme/color        [ loop this for all layers ]
+   Randomize [button] # apply random color for each of the active (checked) layers
+
+2. layer checkbox creates or deletes a bone group with a predefined name: "rig_utils_layer_(X)"
+
+Notes:
+armature layers in:
+bpy.data.armatures[idx].layers
+"""
+
 bl_info = {    
     "name"       : "Armature Utils",
     "authors"    : [ "Kfir, Merlaub", "Tamir Lousky" ],
