@@ -75,8 +75,13 @@ class bone_colors( bpy.types.Panel ):
     @classmethod
     def poll( self, context ):
         try:
+            # Check if the object is an armature
             arm  = context.active_object.type == 'ARMATURE'
+            
+            # Check if the armature is in pose mode
             pose = context.active_object.mode == 'POSE'
+            
+            # Return true and enable panel only if both conditions are met
             return( arm and pose )
         except:
             return False
