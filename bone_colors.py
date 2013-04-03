@@ -75,7 +75,9 @@ class bone_colors( bpy.types.Panel ):
     @classmethod
     def poll( self, context ):
         try:
-            return ( context.active_object.type == 'ARMATURE' )
+            arm  = context.active_object.type == 'ARMATURE'
+            pose = context.active_object.mode == 'POSE'
+            return( arm and pose )
         except:
             return False
 
