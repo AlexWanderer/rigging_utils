@@ -53,15 +53,14 @@ def find_active_layers( obj ):
 
     all_active_layers = []
 
-
     for bone in obj.data.bones:
         # Find bone's active layers. An active layer has a True value.
-        active_layers = [ l for l in bone.layers if l ]
-        
-        # Append new values to the list of all active layers
-        for l in active_layers:
-            if l not in all_active_layers:
-                active_bones.append( l )
+        i = 0
+        for l in bone.layers:
+            # Add an active layer's index to list if its not already there
+            if l and i not in all_active_layers:
+                all_active_layers.append( i )
+            i += 1
 
     return all_active_layers
 
@@ -74,15 +73,13 @@ class bone_colors( bpy.types.Panel ):
     bl_context     = 'posemode'
 
     @classmethod
-    def poll(self, context):
-        # print( "Reached panel poll" )
-        # print( context.active_object.type )
+    def poll( self, context ):
         try:
             return ( context.active_object.type == 'ARMATURE' )
         except:
             return False
 
-    def draw( self, context):
+    def draw( self, context ):
         # Draw panel UI elements #
         layout = self.layout               # Reference to panel layout object
 
@@ -92,24 +89,25 @@ class bone_colors( bpy.types.Panel ):
 
         # Draw "use colors" checkbox
         col        = layout.column()
-        col.prop( color_props.use_color, "Create Color Groups by Rig Layer" )
+        col.prop( color_props, "use_colors", "Create Color Groups by Rig Layer" )
 
-        if color_props.use_color:
+        if color_props.use_colors:
+            group_names = sorted( [ g.name for g in bgroups ] )
+            
             # each bone group gets a row where you can choose its color
-            for g in bgroups:
-                ''' I think this bit is unnecessary
-                col        = layout.column()
-                col.active = (obj.proxy is None)
-                col.prop(g, "name")
-                '''
-
+            for group in group_names:
+                
+                g = bgroups[ group ]
+                
                 split = layout.split()
                 split.active = (obj.proxy is None)
 
                 col = split.column()
-                col.prop(g, "color_set")  # Choose group color theme
+                row = col.row()
+                row.label( text = g.name )
+                row.prop(g, "color_set")  # Choose group color theme
 
-                if group.color_set:
+                if g.color_set:
                     col = split.column()
                     sub = col.row( align = True )
                     sub.prop(g.colors, "normal", text="") # Theme normal color
@@ -119,7 +117,7 @@ class bone_colors( bpy.types.Panel ):
 
 class ColorBones( bpy.types.PropertyGroup ):
 
-    def create_groups( self ):
+    def create_groups( self, context ):
         """ Creates bone groups by rig layers """
         obj = bpy.context.object
 
@@ -135,7 +133,10 @@ class ColorBones( bpy.types.PropertyGroup ):
         for l in active_layers:
             
             # Make bone Group name from bone layer number
-            bgroup_name = 'bgroup' + str(l)
+            if l < 10:
+                bgroup_name = 'bone_group_0' + str(l)
+            else:
+                bgroup_name = 'bone_group_'  + str(l)
 
             # Create a new bone group if it doesn't exist
             if bgroup_name not in bgroups:
@@ -164,17 +165,14 @@ class ColorBones( bpy.types.PropertyGroup ):
         description = "Color bones by rig layers",
         default     = False,
         update      = create_groups
-    )  
+    ) 
 
 
 def register():
     bpy.utils.register_module(__name__)
-    bpy.utils.register_class( bone_colors )
 
     # Ref to prop group via dynamic object property
-    bpy.types.Object.bonegroup_colors = \
-        bpy.props.PointerProperty( type = ColorBones )
+    bpy.types.Object.bonegroup_colors = bpy.props.PointerProperty( type = ColorBones )
     
 def unregister():
     bpy.utils.unregister_module(__name__)
-    bpy.utils.unregister_class( bone_colors )
