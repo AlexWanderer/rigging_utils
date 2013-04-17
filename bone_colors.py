@@ -27,7 +27,7 @@
 #  Start of project : 2013-01-25 
 #  Last modified    : 2013-04-03
 #
-#  Acknowledgements 
+#  Acknowledgements https://github.com/pitchipoy/pitchipoy_utilities.git
 #  ================
 #
 #  Blender: Nathan Vegdahl (who taught us everything we know about 
