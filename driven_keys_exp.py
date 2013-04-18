@@ -322,13 +322,13 @@ class CreateDriver( bpy.types.Operator ):
             opposite = { 'L' : 'R', 'R' : 'L' }
             
             if bone_pieces:
-                groups = bone_pieces.groups()
+                groups = [ g for g in bone_pieces.groups() ]
+                
                 if groups[2]:
                     groups[2]      = opposite[ groups[2] ]
                     congroups      = [ p for p in groups if p ]
                     opposite_name  = "".join( congroups )
                     
-                    print( opposite_name )
                     shapekey_name += "." + opposite[ groups[2] ]
                     
                     if opposite_name in [ b.name for b in rig.data.bones ]:
