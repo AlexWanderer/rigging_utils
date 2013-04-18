@@ -104,7 +104,7 @@ class UpdateKeyPanel(bpy.types.Panel):
 
         col.prop_search(          
             drv_sk_props, "update_shapekey", # Pick shapekey out of the list of
-            sk,           key_blocks         # shapkeys on the selected object
+            sk,           "key_blocks"       # shapkeys on the selected object
         )
 
 
@@ -121,18 +121,79 @@ class DriverPanel(bpy.types.Panel):
     def poll( self, context ):
         selected_bones = [ bone.name for bone in context.object.data.bones if bone.select ]
         
+        name = drv_sk_props.mesh_object
+        
+        obj_exists = name in [ obj.name for obj in context.scene.objects ]
+
+        obj_type = ''
+        if obj_exists:
+            obj_type = context.scene.objects[ name ].type
+        
+        correct_type = obj_type == 'MESH'
+        
         # Only one bone must be selected     
-        return len( selected_bones ) == 1
+        return len( selected_bones ) == 1 and obj_exists and correct_type
         
     def draw( self, context ):
-        pass
-        """
         layout = self.layout
         
         col = layout.column()
         
-        col.operator( 'armature.b2bDriver' )
-        """
+        row = col.row()
+        row.label( text = 'Loc X'         )
+        row.prop( drv_sk_props, 'locX'    )
+        row.prop( drv_sk_props, 'locXmax' )
+        
+        row = col.row()
+        row.label( text = 'Loc Y'         )
+        row.prop( drv_sk_props, 'locY'    )
+        row.prop( drv_sk_props, 'locYmax' )
+        
+        row = col.row()
+        row.label( text = 'Loc Z'         )
+        row.prop( drv_sk_props, 'locZ'    )
+        row.prop( drv_sk_props, 'locZmax' )
+        
+        col.separator()
+        
+        row = col.row()
+        row.label( text = 'Rot X'         )
+        row.prop( drv_sk_props, 'rotX'    )
+        row.prop( drv_sk_props, 'rotXmax' )
+        
+        row = col.row()
+        row.label( text = 'Rot Y'         )
+        row.prop( drv_sk_props, 'rotY'    )
+        row.prop( drv_sk_props, 'rotYmax' )
+        
+        row = col.row()
+        row.label( text = 'Rot Z'         )
+        row.prop( drv_sk_props, 'rotZ'    )
+        row.prop( drv_sk_props, 'rotZmax' )
+        
+        col.separator()
+        
+        row = col.row()
+        row.label( text = 'Scl X'         )
+        row.prop( drv_sk_props, 'sclX'    )
+        row.prop( drv_sk_props, 'sclXmax' )
+        
+        row = col.row()
+        row.label( text = 'Scl Y'         )
+        row.prop( drv_sk_props, 'sclY'    )
+        row.prop( drv_sk_props, 'sclYmax' )
+        
+        row = col.row()
+        row.label( text = 'Scl Z'         )
+        row.prop( drv_sk_props, 'sclZ'    )
+        row.prop( drv_sk_props, 'sclZmax' )        
+        
+        col.separator()
+        
+        col.prop( drv_sk_props, 'symmetrize' )
+        
+        col.operator( 'armature.create_driver' )
+
 
 
 class CreateDriver( bpy.types.Operator ):
@@ -141,6 +202,8 @@ class CreateDriver( bpy.types.Operator ):
     bl_label       = "Create driver"
     bl_description = "Create driver"
     bl_options     = { 'REGISTER', 'UNDO' }
+
+    drv_sk_props = context.scene.corrective_drivenkeys_props
 
     @classmethod
     def poll( self, context ):
@@ -160,109 +223,72 @@ class CreateDriver( bpy.types.Operator ):
         name = [ b.name for b in obj.data.bones if b.select ].pop()
         pb   = obj.pose.bones[ name ]
                   
-        drv_sk_props = context.scene.corrective_drivenkeys_props
+        shapekey_name = drv_sk_props.update_shapekey
+  
+        obj       = bpy.context.scene.objects[ drv_sk_props.mesh_object ]
+        shapekeys = obj.data.shape_keys
         
-        # Update external property
-        drv_sk_props.rest_pos = matrix
-        
-        return {'FINISHED'}
+        existing_shapekeys = [ sk.name for sk in shapekeys.key_blocks ]
 
-
-class b2bDriver( bpy.types.Operator ):
-    """ Records the rest position of a bone for a delta transforms driver """
-    bl_idname      = "armature.b2bDriver"
-    bl_label       = "Create a B2B distance based shapekey driver"
-    bl_description = "Create a B2B distance based shapekey driver"
-    bl_options     = { 'REGISTER', 'UNDO' }
-
-    drv_sk_props = context.scene.corrective_drivenkeys_props
-    sk_obj       = context.scene.objects[ drv_sk_props.mesh_object ]
-
-    @classmethod
-    def poll( self, context ):
-
-        if drv_sk_props.update_key and not drv_sk_props.update_shakepey:
-            # If the "update key" options was selected but no specific 
-            # shakepey was chosen to accept the driver, lock this operator
-            return False
+        # If sk exists use it, else create a new one        
+        if shapekey_name not in existing_shapekeys:
+            obj.shape_key_add( name = shapekey_name, from_mix = False )
             
-        obj = context.object
-        # If the object is of the correct type 
-        if obj.type == 'ARMATURE':
-            # and it is in the correct selection mode 
-            if obj.mode == 'POSE':
-                # and if there's exactly 2 pose bones selected
-                if len( [ b for b in obj.data.bones if b.select ] ) == 2:
-                    # Make sure the user selected a proper obj for shapekeying
-                    if drv_sk_props.mesh_object and sk_obj.type = 'MESH':
-                        # then enable this operator
-                        return True
-        return False
+        shapekey = shapekeys.key_blocks[ shapekey_name ]
 
-    def execute( self, context):
-        # Get the selected bones
-        bones    = [ b.name for b in obj.data.bones if b.select ]
-        pb1, pb2 = [ obj.pose.bones[ b ] for b in bones ]
+        # Create driver    
+        drv      = shapekey.driver_add( "value" ).driver
+        drv.type = 'SCRIPTED'        
         
-        rest_dist = pb1.head - pb2.head
-        rest_len  = rest_dist.length
-        
-        shapekey_name = ''
-        
-        # If the user chose a shapekey, add driver to it,
-        if drv_sk_props.update_key:
-            shapekey_name = drv_sk_props.update_shapekey
-        else: # otherwise create a new one
-            sk_obj.shape_key_add( name = 'Blah', from_mix = False )
-        
-        
+        driver_options = {
+            'LOC_X'   : [ drv_sk_props.locX, drv_sk_props.locXmax ],
+            'LOC_Y'   : [ drv_sk_props.locY, drv_sk_props.locYmax ],  
+            'LOC_Z'   : [ drv_sk_props.locZ, drv_sk_props.locZmax ],
+            'ROT_X'   : [ drv_sk_props.rotX, drv_sk_props.rotXmax ],
+            'ROT_Y'   : [ drv_sk_props.rotY, drv_sk_props.rotYmax ],
+            'ROT_Z'   : [ drv_sk_props.rotZ, drv_sk_props.rotZmax ],
+            'SCALE_X' : [ drv_sk_props.sclX, drv_sk_props.sclXmax ],
+            'SCALE_Y' : [ drv_sk_props.sclY, drv_sk_props.sclYmax ],
+            'SCALE_Z' : [ drv_sk_props.sclZ, drv_sk_props.sclZmax ]
+        }
 
-        
-        shapekey = sk_obj.data.shape_keys.key_blocks[ shapekey_name ]
-        
-        update_shapekey
-        
-        # Create driver
-        drv                          = pb[mch_drv].driver_add("rotation_euler", options[axis]["axis"]).driver
-        drv.type                     = 'SCRIPTED'
-        drv.expression               = options[axis]["expr"]
-        drv_var                      = drv.variables.new()
-        drv_var.name                 = 'sy'
-        drv_var.type                 = "SINGLE_PROP"
-        drv_var.targets[0].id        = self.obj
-        drv_var.targets[0].data_path = pb[master_name].path_from_id() + '.scale.y'
+        expression = ""
 
-        matrix = []
-        
-        # A transformation matrix is composed of 4 vectors of 4 points each
-        # These are stored as a simple array here
-        for v in pb.matrix:
-            for p in v:
-                matrix.append( p )
-                
-        drv_sk_props = context.scene.corrective_drivenkeys_props
-        
-        # Update external property
-        drv_sk_props.rest_pos = matrix
-        
+        active_options = [ o for o in driver_options if driver_options[ o ][0] ]
+        last = len( active_options )
+
+        i = 1
+        for opt in active_options:
+            drv_var                        = drv.variables.new()
+            drv_var.name                   = opt
+            drv_var.type                   = 'TRANSFORMS'
+            drv_var.targets[0].id          = context.object.name
+            drv_var.targets[0].bone_target = name
+            drv_var.transform_type         = opt
+            drv_var.transform_space        = 'LOCAL_SPACE'       
+    
+            if i == 1:
+                expression += "(" + opt + "/" + driver_options[ opt ][1]
+            elif i == last:
+                expression += "+" opt + "/" + driver_options[ opt ][1] + ")"
+                expression += "/" last
+            else:
+                expression += "+" opt + "/" + driver_options[ opt ][1]
+            
+            i += 1
+  
+        drv.expression = expression
+
         return {'FINISHED'}
-
-
 
 
 class correctiveDrivenkeysProps( bpy.types.PropertyGroup ):
-    # Create a new shapekey or add a driver to an existing one
-    update_key = bpy.props.BoolProperty(
-        name        = "update_key",
-        description = "Add driver to an existing shapekey", 
-        default     = False
-    )
-    
-    # These two will be used to select existing objects and shapekeys to
-    # add drivers to
+    # These two will be used to select existing objects
+    # and shapekeys to add drivers to
     mesh_object     = bpy.props.StringProperty()
     update_shapekey = bpy.props.StringProperty()
     
+    # Driver options
     locX = bpy.props.BoolProperty(
         name        = "locX",
         description = "use X location for driving the shapekey", 
@@ -346,6 +372,13 @@ class correctiveDrivenkeysProps( bpy.types.PropertyGroup ):
     sclZmax = bpy.props.FloatProperty(
         name        = "sclZmax", 
         description = "value for full shapekey activation" 
+    )
+
+    # Create a matching shapekey and driver for the opposite bone
+    symmetrize = bpy.props.BoolProperty(
+        name        = "symmetrize",
+        description = "create driver on the corresponding mirror side bone", 
+        default     = False
     )
 
 
