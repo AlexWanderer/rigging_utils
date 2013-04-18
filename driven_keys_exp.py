@@ -40,24 +40,21 @@ bl_info = {
     "location"   : "3D View >> Tools",
     "wiki_url"   : "",
     "tracker_url": "",
-    "description": "Drivers for shapekeys based on relative bone transforms"
+    "description": "Drivers for shapekeys based on bone transforms"
 }
 
 """ 
-This addon creates a driven empty shapekey based on the spacial relatiobship
-between two bones. The purpose is to create a semi-automatic mechanism for
-corrective shapekeys. There are currently two possible drivers:
-1. The distance between the heads of two bones
-2. The sum of the difference of rotation, location and scale (delta transforms)
-   between a single bone's current position and a recorded "rest" position.
-
-If you choose an existing shapekey, the driver will be added to it, otherwise
-an empty shapekey will be created and the driver will be added to it.
+This addon enables you to add a driver to control a corrective shapekey.
+You can either add the driver to an existing or a new, empty shapekey.
+The driver is created automatically based on the transformation channels
+you check in the panel, which represent transfomrations of the selected
+pose bone on the active armature.
+If the selected bone represents one side of a symmetrical rig, you can
+use the symmetrize option to create another shapekey and driver for the
+opposite side's bone (this assumes standard bone naming, exm: 'hand.L.001').
 """
 
-import bpy
-import math
-import re
+import bpy, math, re
 
 class DrivenKeysPanel(bpy.types.Panel):
     bl_idname      = "DrivenKeysPanel"
@@ -82,7 +79,7 @@ class DrivenKeysPanel(bpy.types.Panel):
 
 class UpdateKeyPanel(bpy.types.Panel):
     bl_idname      = "UpdateKeyPanel"
-    bl_label       = "Choose shapekey to drive from selected object"
+    bl_label       = "Choose shapekey to drive"
     bl_space_type  = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_context     = 'posemode'
@@ -149,13 +146,14 @@ class DriverPanel(bpy.types.Panel):
         
         for trans_channel in [ 'loc', 'rot', 'scl' ]:
             for axis in [ 'X', 'Y', 'Z' ]:
-                row = col.row()
-                
-                row.label( text = trans_channel + " " + axis )
-                
+                label = trans_channel + " " + axis
                 prop1 = trans_channel + axis
                 prop2 = prop1 + 'max'
-                
+
+                row = col.row()
+
+                row.label( text = label )
+
                 row.prop( drv_sk_props, prop1 )
                 row.prop( drv_sk_props, prop2 )
         
