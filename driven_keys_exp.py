@@ -15,7 +15,6 @@
 #  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
-
 #
 #  Authors         : Tamir Lousky [ tlousky@gmail.com, tamir@pitchipoy.tv     ]
 #                    Kfir Merlaub [ kfir.merlaub@gmail.com, kfir@pitchipoy.tv ]
@@ -38,8 +37,8 @@ bl_info = {
     "blender"    : (2, 66, 0),
     "category"   : "Rigging",
     "location"   : "3D View >> Tools",
-    "wiki_url"   : "",
-    "tracker_url": "",
+    "wiki_url"   : "https://github.com/pitchipoy/rigging_utils/wiki/driven-corrective-shapekeys-(driven_keys_exp.py)",
+    "tracker_url": "https://github.com/pitchipoy/rigging_utils",
     "description": "Drivers for shapekeys based on bone transforms"
 }
 
@@ -49,7 +48,17 @@ You can either add the driver to an existing or a new, empty shapekey.
 The driver is created automatically based on the transformation channels
 you check in the panel, which represent transfomrations of the selected
 pose bone on the active armature.
-If the selected bone represents one side of a symmetrical rig, you can
+
+To make the driver work as expected, you need to add a maximum value for each
+of the selected transform channels. These represent the transformation value
+which you want to fully activate the shapekey's. For instance, let's imagine a
+shapekey that should be fully activated when the elbow bone is rotated to
+130 degrees (i.e. the max value = 130).
+
+If you select more than one transformation channel, the shapekey's value will
+be driven by an average of all channels.
+
+If the bone you selected represents one side of a symmetrical rig, you can
 use the symmetrize option to create another shapekey and driver for the
 opposite side's bone (this assumes standard bone naming, exm: 'hand.L.001').
 """
