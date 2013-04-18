@@ -147,54 +147,17 @@ class DriverPanel(bpy.types.Panel):
         
         col = layout.column()
         
-        row = col.row()
-        row.label( text = 'Loc X'         )
-        row.prop( drv_sk_props, 'locX'    )
-        row.prop( drv_sk_props, 'locXmax' )
-        
-        row = col.row()
-        row.label( text = 'Loc Y'         )
-        row.prop( drv_sk_props, 'locY'    )
-        row.prop( drv_sk_props, 'locYmax' )
-        
-        row = col.row()
-        row.label( text = 'Loc Z'         )
-        row.prop( drv_sk_props, 'locZ'    )
-        row.prop( drv_sk_props, 'locZmax' )
-        
-        col.separator()
-        
-        row = col.row()
-        row.label( text = 'Rot X'         )
-        row.prop( drv_sk_props, 'rotX'    )
-        row.prop( drv_sk_props, 'rotXmax' )
-        
-        row = col.row()
-        row.label( text = 'Rot Y'         )
-        row.prop( drv_sk_props, 'rotY'    )
-        row.prop( drv_sk_props, 'rotYmax' )
-        
-        row = col.row()
-        row.label( text = 'Rot Z'         )
-        row.prop( drv_sk_props, 'rotZ'    )
-        row.prop( drv_sk_props, 'rotZmax' )
-        
-        col.separator()
-        
-        row = col.row()
-        row.label( text = 'Scl X'         )
-        row.prop( drv_sk_props, 'sclX'    )
-        row.prop( drv_sk_props, 'sclXmax' )
-        
-        row = col.row()
-        row.label( text = 'Scl Y'         )
-        row.prop( drv_sk_props, 'sclY'    )
-        row.prop( drv_sk_props, 'sclYmax' )
-        
-        row = col.row()
-        row.label( text = 'Scl Z'         )
-        row.prop( drv_sk_props, 'sclZ'    )
-        row.prop( drv_sk_props, 'sclZmax' )        
+        for trans_channel in [ 'loc', 'rot', 'scl' ]:
+            for axis in [ 'X', 'Y', 'Z' ]:
+                row = col.row()
+                
+                row.label( text = trans_channel + " " + axis )
+                
+                prop1 = trans_channel + axis
+                prop2 = prop1 + 'max'
+                
+                row.prop( drv_sk_props, prop1 )
+                row.prop( drv_sk_props, prop2 )
         
         col.separator()
         
