@@ -212,22 +212,51 @@ class CreateDriver( bpy.types.Operator ):
     @classmethod
     def poll( self, context ):
         drv_sk_props = context.scene.corrective_drivenkeys_props
-        obj = context.object
+        
+        driver_options = {
+                'LOC_X'   : [ drv_sk_props.locX, drv_sk_props.locXmax ],
+                'LOC_Y'   : [ drv_sk_props.locY, drv_sk_props.locYmax ],  
+                'LOC_Z'   : [ drv_sk_props.locZ, drv_sk_props.locZmax ],
+                'ROT_X'   : [ drv_sk_props.rotX, drv_sk_props.rotXmax ],
+                'ROT_Y'   : [ drv_sk_props.rotY, drv_sk_props.rotYmax ],
+                'ROT_Z'   : [ drv_sk_props.rotZ, drv_sk_props.rotZmax ],
+                'SCALE_X' : [ drv_sk_props.sclX, drv_sk_props.sclXmax ],
+                'SCALE_Y' : [ drv_sk_props.sclY, drv_sk_props.sclYmax ],
+                'SCALE_Z' : [ drv_sk_props.sclZ, drv_sk_props.sclZmax ]
+        }
 
+        obj = context.object
+        active_options = [ o for o in driver_options if driver_options[ o ][0] ]
+        
         # If the object is of the correct type 
         if obj.type == 'ARMATURE':
             # and it is in the correct selection mode 
             if obj.mode == 'POSE':
-                # and if there'mesh_objects exactly 1 pose bone selected
+                # and if there's exactly 1 pose bone selected
                 if len( [ b for b in obj.data.bones if b.select ] ) == 1:
-                    # then enable this operator
-                    return True
+                    # Ensure the user chose at least one driver transform chan.
+                    if len( active_options ) > 0:
+                        # then enable this operator
+                        return True
         return False
 
     def execute( self, context):
-        drv_sk_props = context.scene.corrective_drivenkeys_props
         obj          = bpy.context.scene.objects[ drv_sk_props.mesh_object ]
         rig          = context.object
+
+        drv_sk_props = context.scene.corrective_drivenkeys_props
+        
+        driver_options = {
+                'LOC_X'   : [ drv_sk_props.locX, drv_sk_props.locXmax ],
+                'LOC_Y'   : [ drv_sk_props.locY, drv_sk_props.locYmax ],  
+                'LOC_Z'   : [ drv_sk_props.locZ, drv_sk_props.locZmax ],
+                'ROT_X'   : [ drv_sk_props.rotX, drv_sk_props.rotXmax ],
+                'ROT_Y'   : [ drv_sk_props.rotY, drv_sk_props.rotYmax ],
+                'ROT_Z'   : [ drv_sk_props.rotZ, drv_sk_props.rotZmax ],
+                'SCALE_X' : [ drv_sk_props.sclX, drv_sk_props.sclXmax ],
+                'SCALE_Y' : [ drv_sk_props.sclY, drv_sk_props.sclYmax ],
+                'SCALE_Z' : [ drv_sk_props.sclZ, drv_sk_props.sclZmax ]
+        }
 
         # Get the selected bone
         name = [ b.name for b in rig.data.bones if b.select ].pop()
@@ -245,18 +274,6 @@ class CreateDriver( bpy.types.Operator ):
         # Create driver    
         drv      = shapekey.driver_add( "value" ).driver
         drv.type = 'SCRIPTED'        
-        
-        driver_options = {
-            'LOC_X'   : [ drv_sk_props.locX, drv_sk_props.locXmax ],
-            'LOC_Y'   : [ drv_sk_props.locY, drv_sk_props.locYmax ],  
-            'LOC_Z'   : [ drv_sk_props.locZ, drv_sk_props.locZmax ],
-            'ROT_X'   : [ drv_sk_props.rotX, drv_sk_props.rotXmax ],
-            'ROT_Y'   : [ drv_sk_props.rotY, drv_sk_props.rotYmax ],
-            'ROT_Z'   : [ drv_sk_props.rotZ, drv_sk_props.rotZmax ],
-            'SCALE_X' : [ drv_sk_props.sclX, drv_sk_props.sclXmax ],
-            'SCALE_Y' : [ drv_sk_props.sclY, drv_sk_props.sclYmax ],
-            'SCALE_Z' : [ drv_sk_props.sclZ, drv_sk_props.sclZmax ]
-        }
 
         expression = ""
 
@@ -272,14 +289,8 @@ class CreateDriver( bpy.types.Operator ):
             drv_var.targets[0].bone_target     = name
             drv_var.targets[0].transform_type  = opt
             drv_var.targets[0].transform_space = 'LOCAL_SPACE'       
-
-            convertor = round( driver_options[ opt ][1], 3 )
-            
-            # If this is a rotation parameter, convert to radians
-            if "rot" in opt.lower():
-                convertor = round( math.radians( convertor ), 3 )
-            
-            convertor = str( convertor )
+           
+            convertor = str( round( driver_options[ opt ][1], 3 ) )
                 
             if last == 1:
                 expression = opt + "/" + convertor
@@ -287,7 +298,7 @@ class CreateDriver( bpy.types.Operator ):
                 expression += "(" + opt + "/" + convertor
             elif i == last:
                 expression += "+" + opt + "/" + convertor + ")"
-                expression += "/" + last
+                expression += "/" + str(last)
             else:
                 expression += "+" + opt + "/" + convertor
             
