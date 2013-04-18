@@ -302,7 +302,7 @@ class CreateDriver( bpy.types.Operator ):
 
         return {'FINISHED'}        
     
-    def execute( self, context):
+    def execute( self, context ):
         drv_sk_props = context.scene.corrective_drivenkeys_props
 
         obj          = context.scene.objects[ drv_sk_props.mesh_object ]
@@ -313,22 +313,28 @@ class CreateDriver( bpy.types.Operator ):
 
         shapekey_name = drv_sk_props.update_shapekey
 
-        self.create_driver( obj, rig, bone, shapekey_name )
+        self.create_driver( context, obj, rig, bone, shapekey_name )
         
         if drv_sk_props.symmetrize:
-            pattern     = '^(\w+)(\.)?([LR])?(\.\d*)?$'
-            bone_pieces = re.match( pattern, bone ).groups()
+            pattern     = '^(\w+[-_]?\w+?)(\.)?([LR])?(\.\d*)?$'
+            bone_pieces = re.match( pattern, bone )
 
             opposite = { 'L' : 'R', 'R' : 'L' }
             
-            if bone_pieces[2]:
-                bone_pieces[2] = opposite[ bone_pieces[2] ]
-                congroups      = [ p for p in bone_pieces if p ]
-                opposite_name  = "".join( congroups )
-                
-                if opposite_name in [ b.name for b in rig.data.bones ]:
-                    self.create_driver( obj, rig, opposite_name, shapekey_name )
+            if bone_pieces:
+                groups = bone_pieces.groups()
+                if groups[2]:
+                    groups[2]      = opposite[ groups[2] ]
+                    congroups      = [ p for p in groups if p ]
+                    opposite_name  = "".join( congroups )
+                    
+                    print( opposite_name )
+                    shapekey_name += "." + opposite[ groups[2] ]
+                    
+                    if opposite_name in [ b.name for b in rig.data.bones ]:
+                        self.create_driver( context, obj, rig, opposite_name, shapekey_name )
 
+        return {'FINISHED'} 
 
 class correctiveDrivenkeysProps( bpy.types.PropertyGroup ):
     # These two will be used to select existing objects
