@@ -17,9 +17,11 @@
 # ##### END GPL LICENSE BLOCK #####
 
 #
-#  Author            : Tamir Lousky [ tlousky@gmail.com, tamir@pitchipoy.tv ]
+#  Authors         : Tamir Lousky [ tlousky@gmail.com, tamir@pitchipoy.tv     ]
+#                    Kfir Merlaub [ kfir.merlaub@gmail.com, kfir@pitchipoy.tv ]
 #
-#  Homepage(Wiki)    : http://bioblog3d.wordpress.com/
+#  Homepage(Wiki)    : [Tlousky] http://bioblog3d.wordpress.com/
+#  Homepage(Wiki)    : [KfirMer] http://kfirmerlaub.wix.com/kfirconceptart
 #  Studio (sponsor)  : Pitchipoy Animation Productions (www.pitchipoy.tv)
 # 
 #  Start of project              : 2013-04-04 by Tamir Lousky
@@ -31,7 +33,7 @@
 
 bl_info = {    
     "name"       : "Driven Shapekeys",
-    "author"     : "Tamir Lousky",
+    "authors"    : [ "Tamir Lousky", "Kfir Merlaub" ],
     "version"    : (0, 0, 1),
     "blender"    : (2, 66, 0),
     "category"   : "Rigging",
@@ -84,10 +86,10 @@ class UpdateKeyPanel(bpy.types.Panel):
     bl_region_type = 'TOOLS'
     bl_context     = 'posemode'
 
-    drv_sk_props = context.scene.corrective_drivenkeys_props
-
     @classmethod
     def poll( self, context ):
+        drv_sk_props = context.scene.corrective_drivenkeys_props
+        
         # The object name must represent a real object in the scene
         if drv_sk_props.mesh_object in [ obj.name for obj in context.scene.objects ]:
             obj = context.scene.objects[ drv_sk_props.mesh_object ]
@@ -97,10 +99,14 @@ class UpdateKeyPanel(bpy.types.Panel):
         return False
 
     def draw( self, context ):
+        drv_sk_props = context.scene.corrective_drivenkeys_props
+         
         layout = self.layout
 
         obj = bpy.context.scene.objects[ drv_sk_props.mesh_object ]
         sk  = obj.data.shape_keys
+
+        col = layout.column()
 
         col.prop_search(          
             drv_sk_props, "update_shapekey", # Pick shapekey out of the list of
@@ -115,10 +121,9 @@ class DriverPanel(bpy.types.Panel):
     bl_region_type = 'TOOLS'
     bl_context     = 'posemode'
 
-    drv_sk_props = context.scene.corrective_drivenkeys_props
-
     @classmethod
     def poll( self, context ):
+        drv_sk_props   = context.scene.corrective_drivenkeys_props
         selected_bones = [ bone.name for bone in context.object.data.bones if bone.select ]
         
         name = drv_sk_props.mesh_object
@@ -135,6 +140,8 @@ class DriverPanel(bpy.types.Panel):
         return len( selected_bones ) == 1 and obj_exists and correct_type
         
     def draw( self, context ):
+        drv_sk_props = context.scene.corrective_drivenkeys_props
+
         layout = self.layout
         
         col = layout.column()
@@ -195,7 +202,6 @@ class DriverPanel(bpy.types.Panel):
         col.operator( 'armature.create_driver' )
 
 
-
 class CreateDriver( bpy.types.Operator ):
     """ Create the driver based on the current bone's maximal position """
     bl_idname      = "armature.create_driver"
@@ -203,11 +209,11 @@ class CreateDriver( bpy.types.Operator ):
     bl_description = "Create driver"
     bl_options     = { 'REGISTER', 'UNDO' }
 
-    drv_sk_props = context.scene.corrective_drivenkeys_props
-
     @classmethod
     def poll( self, context ):
+        drv_sk_props = context.scene.corrective_drivenkeys_props
         obj = context.object
+
         # If the object is of the correct type 
         if obj.type == 'ARMATURE':
             # and it is in the correct selection mode 
@@ -219,15 +225,15 @@ class CreateDriver( bpy.types.Operator ):
         return False
 
     def execute( self, context):
+        drv_sk_props = context.scene.corrective_drivenkeys_props
+        obj          = bpy.context.scene.objects[ drv_sk_props.mesh_object ]
+        rig          = context.object
+
         # Get the selected bone
-        name = [ b.name for b in obj.data.bones if b.select ].pop()
-        pb   = obj.pose.bones[ name ]
+        name = [ b.name for b in rig.data.bones if b.select ].pop()
                   
-        shapekey_name = drv_sk_props.update_shapekey
-  
-        obj       = bpy.context.scene.objects[ drv_sk_props.mesh_object ]
-        shapekeys = obj.data.shape_keys
-        
+        shapekey_name      = drv_sk_props.update_shapekey
+        shapekeys          = obj.data.shape_keys
         existing_shapekeys = [ sk.name for sk in shapekeys.key_blocks ]
 
         # If sk exists use it, else create a new one        
@@ -259,21 +265,31 @@ class CreateDriver( bpy.types.Operator ):
 
         i = 1
         for opt in active_options:
-            drv_var                        = drv.variables.new()
-            drv_var.name                   = opt
-            drv_var.type                   = 'TRANSFORMS'
-            drv_var.targets[0].id          = context.object.name
-            drv_var.targets[0].bone_target = name
-            drv_var.transform_type         = opt
-            drv_var.transform_space        = 'LOCAL_SPACE'       
-    
-            if i == 1:
-                expression += "(" + opt + "/" + driver_options[ opt ][1]
+            drv_var                            = drv.variables.new()
+            drv_var.name                       = opt
+            drv_var.type                       = 'TRANSFORMS'
+            drv_var.targets[0].id              = rig
+            drv_var.targets[0].bone_target     = name
+            drv_var.targets[0].transform_type  = opt
+            drv_var.targets[0].transform_space = 'LOCAL_SPACE'       
+
+            convertor = round( driver_options[ opt ][1], 3 )
+            
+            # If this is a rotation parameter, convert to radians
+            if "rot" in opt.lower():
+                convertor = round( math.radians( convertor ), 3 )
+            
+            convertor = str( convertor )
+                
+            if last == 1:
+                expression = opt + "/" + convertor
+            elif i == 1:
+                expression += "(" + opt + "/" + convertor
             elif i == last:
-                expression += "+" opt + "/" + driver_options[ opt ][1] + ")"
-                expression += "/" last
+                expression += "+" + opt + "/" + convertor + ")"
+                expression += "/" + last
             else:
-                expression += "+" opt + "/" + driver_options[ opt ][1]
+                expression += "+" + opt + "/" + convertor
             
             i += 1
   
