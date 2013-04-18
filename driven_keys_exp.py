@@ -57,6 +57,7 @@ an empty shapekey will be created and the driver will be added to it.
 
 import bpy
 import math
+import re
 
 class DrivenKeysPanel(bpy.types.Panel):
     bl_idname      = "DrivenKeysPanel"
@@ -240,12 +241,9 @@ class CreateDriver( bpy.types.Operator ):
                         return True
         return False
 
-    def execute( self, context):
-        obj          = bpy.context.scene.objects[ drv_sk_props.mesh_object ]
-        rig          = context.object
-
+    def create_driver( self, context, obj, rig, bone, shapekey_name ):
         drv_sk_props = context.scene.corrective_drivenkeys_props
-        
+
         driver_options = {
                 'LOC_X'   : [ drv_sk_props.locX, drv_sk_props.locXmax ],
                 'LOC_Y'   : [ drv_sk_props.locY, drv_sk_props.locYmax ],  
@@ -257,11 +255,7 @@ class CreateDriver( bpy.types.Operator ):
                 'SCALE_Y' : [ drv_sk_props.sclY, drv_sk_props.sclYmax ],
                 'SCALE_Z' : [ drv_sk_props.sclZ, drv_sk_props.sclZmax ]
         }
-
-        # Get the selected bone
-        name = [ b.name for b in rig.data.bones if b.select ].pop()
                   
-        shapekey_name      = drv_sk_props.update_shapekey
         shapekeys          = obj.data.shape_keys
         existing_shapekeys = [ sk.name for sk in shapekeys.key_blocks ]
 
@@ -286,7 +280,7 @@ class CreateDriver( bpy.types.Operator ):
             drv_var.name                       = opt
             drv_var.type                       = 'TRANSFORMS'
             drv_var.targets[0].id              = rig
-            drv_var.targets[0].bone_target     = name
+            drv_var.targets[0].bone_target     = bone
             drv_var.targets[0].transform_type  = opt
             drv_var.targets[0].transform_space = 'LOCAL_SPACE'       
            
@@ -306,7 +300,34 @@ class CreateDriver( bpy.types.Operator ):
   
         drv.expression = expression
 
-        return {'FINISHED'}
+        return {'FINISHED'}        
+    
+    def execute( self, context):
+        drv_sk_props = context.scene.corrective_drivenkeys_props
+
+        obj          = context.scene.objects[ drv_sk_props.mesh_object ]
+        rig          = context.object
+
+        # Get the selected bone
+        bone = [ b.name for b in rig.data.bones if b.select ].pop()
+
+        shapekey_name = drv_sk_props.update_shapekey
+
+        self.create_driver( obj, rig, bone, shapekey_name )
+        
+        if drv_sk_props.symmetrize:
+            pattern     = '^(\w+)(\.)?([LR])?(\.\d*)?$'
+            bone_pieces = re.match( pattern, bone ).groups()
+
+            opposite = { 'L' : 'R', 'R' : 'L' }
+            
+            if bone_pieces[2]:
+                bone_pieces[2] = opposite[ bone_pieces[2] ]
+                congroups      = [ p for p in bone_pieces if p ]
+                opposite_name  = "".join( congroups )
+                
+                if opposite_name in [ b.name for b in rig.data.bones ]:
+                    self.create_driver( obj, rig, opposite_name, shapekey_name )
 
 
 class correctiveDrivenkeysProps( bpy.types.PropertyGroup ):
